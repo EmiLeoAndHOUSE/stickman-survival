@@ -5,16 +5,17 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// 1440x810 è un ottimo compromesso tra Desktop e Mobile (16:9)
-let width = 1440;
-let height = 810;
+// 1024x576 è lo standard d'oro per performance/qualità su mobile (16:9)
+let width = 1024;
+let height = 576;
 
 function resize() {
-    // La risoluzione INTERNA del canvas rimane fissa per stabilità
-    canvas.width = 1440;
-    canvas.height = 810;
-    // Il CSS (aggiunto in style.css) si occupa di adattarlo allo schermo
+    // La risoluzione INTERNA del canvas rimane fissa per stabilità estrema
+    canvas.width = 1024;
+    canvas.height = 576;
+    // Il CSS (object-fit: contain) si occupa di adattarlo allo schermo
 }
+
 
 
 window.addEventListener('resize', resize);
@@ -754,12 +755,13 @@ class World {
 
         let horizonY = 600 - camera.y;
         let hillOffsetX = (camera.x * 0.2) % 800;
+        let hillCount = Math.ceil(width / 800) + 1;
 
         ctx.fillStyle = '#3E2723';
         ctx.fillRect(0, horizonY, width, 2000);
 
         ctx.beginPath();
-        for (let i = -1; i <= Math.ceil(width / 800) + 1; i++) {
+        for (let i = -1; i <= hillCount; i++) {
             let cx = (i * 800) - hillOffsetX + 400;
             ctx.ellipse(cx, horizonY + 110, 500, 200, 0, Math.PI, 0);
         }
@@ -770,7 +772,7 @@ class World {
             ctx.save();
             ctx.translate(-hillOffsetX, 0);
             ctx.beginPath();
-            for (let i = -2; i <= Math.ceil(width / 800) + 2; i++) {
+            for (let i = -2; i <= hillCount + 1; i++) {
                 let cx = (i * 800) + 400;
                 ctx.ellipse(cx, horizonY + 80, 500, 200, 0, Math.PI, 0);
             }
@@ -779,7 +781,7 @@ class World {
         } else {
             ctx.fillStyle = '#4a7023';
             ctx.beginPath();
-            for (let i = -1; i <= Math.ceil(width / 800) + 1; i++) {
+            for (let i = -1; i <= hillCount; i++) {
                 let cx = (i * 800) - hillOffsetX + 400;
                 ctx.ellipse(cx, horizonY + 80, 500, 200, 0, Math.PI, 0);
             }
@@ -788,7 +790,7 @@ class World {
 
         ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
         ctx.beginPath();
-        for (let i = -1; i <= Math.ceil(width / 800) + 1; i++) {
+        for (let i = -1; i <= hillCount; i++) {
             let cx = (i * 800) - hillOffsetX + 400;
             ctx.ellipse(cx, horizonY + 80, 500, 200, 0, Math.PI, 0);
         }
@@ -807,7 +809,7 @@ class World {
             ctx.save();
             ctx.translate(-midOffsetX, 0);
             ctx.beginPath();
-            for (let i = -2; i <= Math.ceil(width / 800) + 2; i++) {
+            for (let i = -2; i <= hillCount + 1; i++) {
                 let cx = (i * 800) + 400;
                 ctx.ellipse(cx, midHorizonY + 5, 450, 40, 0, Math.PI, 0);
             }
@@ -820,7 +822,7 @@ class World {
 
         ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
         ctx.beginPath();
-        for (let i = -1; i <= Math.ceil(width / 800) + 1; i++) {
+        for (let i = -1; i <= hillCount; i++) {
             let cx = (i * 800) - midOffsetX + 400;
             ctx.ellipse(cx, midHorizonY + 5, 450, 40, 0, Math.PI, 0);
         }
@@ -2947,6 +2949,9 @@ document.addEventListener('DOMContentLoaded', () => {
     updateMiniLeaderboard();
 });
 
+let cachedDarknessGradient = null;
+let lastDarknessAlpha = -1;
+
 function drawDarkness(ctx) {
     let darknessAlpha = 0;
 
@@ -2961,22 +2966,41 @@ function drawDarkness(ctx) {
     }
 
     if (darknessAlpha > 0) {
-        let playerScreenX = player.x - camera.x + player.width / 2;
-        let playerScreenY = player.y - camera.y + player.height / 2;
+        let px = player.x - camera.x + player.width / 2;
+        let py = player.y - camera.y + player.height / 2;
 
-        let grad = ctx.createRadialGradient(
-            playerScreenX, playerScreenY, 40,
-            playerScreenX, playerScreenY, 350
-        );
+        // Ottimizzazione: Ridisegniamo il gradiente solo se cambia l'opacità
+        if (darknessAlpha !== lastDarknessAlpha) {
+            let offCanvas = document.createElement('canvas');
+            offCanvas.width = 700;
+            offCanvas.height = 700;
+            let offCtx = offCanvas.getContext('2d');
+            
+            let grad = offCtx.createRadialGradient(350, 350, 40, 350, 350, 350);
+            grad.addColorStop(0, 'rgba(0,0,0,0)');
+            grad.addColorStop(0.5, `rgba(0,0,0, ${darknessAlpha * 0.4})`);
+            grad.addColorStop(1, `rgba(0,0,0, ${darknessAlpha})`);
+            
+            offCtx.fillStyle = grad;
+            offCtx.fillRect(0, 0, 700, 700);
+            cachedDarknessGradient = offCanvas;
+            lastDarknessAlpha = darknessAlpha;
+        }
 
-        grad.addColorStop(0, 'rgba(0,0,0,0)');
-        grad.addColorStop(0.5, `rgba(0,0,0, ${darknessAlpha * 0.4})`);
-        grad.addColorStop(1, `rgba(0,0,0, ${darknessAlpha})`);
-
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, width, height);
+        if (cachedDarknessGradient) {
+            // Disegniamo il gradiente centrato sul player
+            ctx.drawImage(cachedDarknessGradient, px - 350, py - 350);
+            
+            // Riempiamo i bordi esterni con nero solido (molto più performante di un gradiente gigante)
+            ctx.fillStyle = `rgba(0,0,0, ${darknessAlpha})`;
+            if (py - 350 > 0) ctx.fillRect(0, 0, width, py - 350); // Sopra
+            if (py + 350 < height) ctx.fillRect(0, py + 350, width, height - (py + 350)); // Sotto
+            if (px - 350 > 0) ctx.fillRect(0, py - 350, px - 350, 700); // Sinistra
+            if (px + 350 < width) ctx.fillRect(px + 350, py - 350, width - (px + 350), 700); // Destra
+        }
     }
 }
+
 
 function draw() {
     // Aggiornamento Camera basato su dimensioni fisse (Già stabilito 1440x810)
