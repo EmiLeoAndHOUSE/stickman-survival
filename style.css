@@ -12,6 +12,8 @@ canvas {
     display: block;
     width: 100vw;
     height: 100vh;
+    object-fit: contain;
+    background-color: #000;
 }
 
 #ui {
