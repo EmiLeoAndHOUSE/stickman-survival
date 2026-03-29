@@ -834,11 +834,14 @@ class World {
         }
         ctx.fill();
 
-        this.backgrounds.forEach(bg => {
+        // OTTIMIZZAZIONE: Disegniamo solo decorazioni visibili
+        const bgs = this.backgrounds;
+        for (let i = 0; i < bgs.length; i++) {
+            let bg = bgs[i];
             let screenX = bg.x - (camera.x * parallaxFactor);
             let screenY = bg.y - camera.y + 30;
 
-            if (screenX + bg.width > 0 && screenX < width) {
+            if (screenX + bg.width > -100 && screenX < width + 100) {
                 if (bg.type === 'tree') {
                     let cx = screenX + bg.width / 2;
                     let cy = screenY;
@@ -862,14 +865,15 @@ class World {
                         { x: -15, y: -240, w: 30, h: 30 }
                     ];
 
-                    leavesPos.forEach(leaf => {
+                    for (let j = 0; j < leavesPos.length; j++) {
+                        let leaf = leavesPos[j];
                         ctx.fillStyle = '#051A05';
                         ctx.fillRect(cx + leaf.x - 2, cy + leaf.y - 2, leaf.w + 4, leaf.h + 4);
                         ctx.fillStyle = '#1B5E20';
                         ctx.fillRect(cx + leaf.x, cy + leaf.y, leaf.w, leaf.h);
                         ctx.fillStyle = '#2E7D32';
                         ctx.fillRect(cx + leaf.x + 2, cy + leaf.y + 2, leaf.w - 10, leaf.h / 2.5);
-                    });
+                    }
 
                 } else if (bg.type === 'house') {
                     this.renderFantasyHouse(ctx, screenX, screenY - 120, bg.width, 120, true, false);
@@ -877,8 +881,9 @@ class World {
                     this.renderCastlevania(ctx, screenX, screenY - 250, bg.width, 250, true, false);
                 }
             }
-        });
+        }
     }
+
 
     drawForeground(ctx, camera) {
         // --- 1. FONDO GROTTA (PROFONDITÀ 3D E MASCHERAMENTO) ---
@@ -919,12 +924,14 @@ class World {
             }
         });
 
-        // --- 2. PIATTAFORME E PARETI ---
-        this.platforms.forEach(plat => {
+        // --- 2. PIATTAFORME E PARETI (Ottimizzate col Culling) ---
+        const plats = this.platforms;
+        for (let i = 0; i < plats.length; i++) {
+            let plat = plats[i];
             let screenX = plat.x - camera.x;
             let screenY = plat.y - camera.y;
 
-            if (screenX + plat.width > 0 && screenX < width) {
+            if (screenX + plat.width > -100 && screenX < width + 100) {
 
                 if (plat.isCave || plat.isWall) {
                     ctx.save();
@@ -943,7 +950,7 @@ class World {
                     ctx.fillRect(screenX, screenY, plat.width, plat.height);
                 }
 
-                if (!plat.isCave && !plat.isWall) {
+                if (!plat.isCave && !plat.isWall && !plat.isStairs) {
                     let grassThickness = Math.min(40, plat.height);
 
                     if (typeof gfx !== 'undefined' && gfx.grass && gfx.grass.complete && gfx.grass.naturalWidth > 0) {
@@ -960,23 +967,26 @@ class World {
                     }
                 }
             }
-        });
+        }
 
-        // --- 3. DECORAZIONI (FUNGHI, LIANE, MINERALI) ---
-        this.decorations.forEach(dec => {
+
+        // --- 3. DECORAZIONI (FUNGHI, LIANE, MINERALI) (Ottimizzate col Culling) ---
+        const decs = this.decorations;
+        for (let i = 0; i < decs.length; i++) {
+            let dec = decs[i];
             let screenX = dec.x - camera.x;
             let screenY = dec.y - camera.y;
 
-            if (screenX > -200 && screenX < width + 200) {
+            if (screenX > -150 && screenX < width + 150) {
                 if (dec.type === 'stalactite') {
                     ctx.fillStyle = '#0F0F0F';
                     let steps = 4;
                     let stH = dec.scale * 15;
                     let stW = dec.scale * 20;
-                    for (let i = 0; i < steps; i++) {
-                        let currentW = stW - (i * (stW / steps));
+                    for (let j = 0; j < steps; j++) {
+                        let currentW = stW - (j * (stW / steps));
                         let currentX = screenX - currentW / 2;
-                        let currentY = screenY + (i * stH);
+                        let currentY = screenY + (j * stH);
                         ctx.fillRect(currentX, currentY, currentW, stH);
                     }
                 } else if (dec.type === 'mushroom') {
@@ -998,6 +1008,7 @@ class World {
                     ctx.restore();
                 } else if (dec.type === 'mineral') {
                     ctx.save();
+
                     ctx.translate(screenX, screenY);
                     ctx.rotate(Math.PI / 4); // Effetto diamante
                     ctx.fillStyle = dec.color;
@@ -1047,18 +1058,20 @@ class World {
                     ctx.lineTo(0, -25 * dec.scale);
                     ctx.lineTo(2 * dec.scale, -10 * dec.scale);
                     ctx.fill();
-
                     ctx.restore();
                 }
             }
-        });
+        }
 
-        // Render Interactables in Primo Piano
-        this.interactables.forEach(b => {
+
+        // Render Interactables in Primo Piano (Ottimizzate col Culling)
+        const items = this.interactables;
+        for (let k = 0; k < items.length; k++) {
+            let b = items[k];
             let screenX = b.x - camera.x;
             let screenY = b.y - camera.y;
 
-            if (screenX + b.width > 0 && screenX < width) {
+            if (screenX + b.width > -100 && screenX < width + 100) {
                 if (b.type === 'house') {
                     this.renderFantasyHouse(ctx, screenX, screenY, b.width, b.height, false, b.looted);
                 } else if (b.type === 'castle') {
@@ -1085,8 +1098,9 @@ class World {
                     this.drawChest(ctx, screenX, screenY, b.looted);
                 }
             }
-        });
+        }
     }
+
 
     drawChest(ctx, x, y, isLooted) {
         let w = 60;
@@ -1123,15 +1137,23 @@ class World {
         }
     }
 
-    // --- NUOVA FUNZIONE DI COLLISIONE PER IA ---
     isSolid(x, y) {
         // Controlla se il punto (x,y) si trova all'interno di una piattaforma solida (non pass-through)
-        return this.platforms.some(p => {
+        const plats = this.platforms;
+        for (let i = 0; i < plats.length; i++) {
+            let p = plats[i];
+            // OTTIMIZZAZIONE SPAZIALE: Salta piattaforme lontane (> 600px)
+            if (Math.abs(p.x - x) > 600) continue;
+
             let isOneWay = p.height <= 30 || p.isStairs || p.isBridge;
-            if (isOneWay) return false; // Le piattaforme sottili non bloccano il cammino laterale
-            return x >= p.x && x <= p.x + p.width && y >= p.y && y <= p.y + p.height;
-        });
+            if (isOneWay) continue;
+            if (x >= p.x && x <= p.x + p.width && y >= p.y && y <= p.y + p.height) {
+                return true;
+            }
+        }
+        return false;
     }
+
 }
 
 // ==========================================
@@ -1283,16 +1305,20 @@ class Player {
             this.vy *= 0.6; // Smorza la salita se hai rilasciato il tasto
         }
 
-        // 1. FISICA ORIZZONTALE & COLLISIONE
+        // 1. FISICA ORIZZONTALE & COLLISIONE (Ottimizzata col Culling)
         this.vy += this.gravity * dt; // Applica gravità
         this.x += this.vx * dt;
         if (this.x < 0) this.x = 0;
 
-        world.platforms.forEach(p => {
+        const plats = world.platforms;
+        for (let i = 0; i < plats.length; i++) {
+            let p = plats[i];
+            // Salta piattaforme lontane per performance
+            if (Math.abs(p.x - this.x) > 800) continue;
+
             // "Piattaforme Unidirezionali" (One-Way): Tetti, Ponti, Mensole e Jump-pads
-            // Sono attraversabili lateralmente e dal basso se sono sottili (height <= 30)
             let isOneWay = p.height <= 30 || p.isStairs || p.isBridge;
-            if (isOneWay) return;
+            if (isOneWay) continue;
 
             // Controlla se siamo nell'area verticale della piattaforma
             if (this.y + this.height > p.y + 5 && this.y < p.y + p.height - 5) {
@@ -1307,13 +1333,17 @@ class Player {
                     this.vx = 0;
                 }
             }
-        });
+        }
 
-        // 2. FISICA VERTICALE & COLLISIONE
+
+        // 2. FISICA VERTICALE & COLLISIONE (Ottimizzata col Culling)
         this.y += this.vy * dt;
         this.isGrounded = false;
 
-        world.platforms.forEach(p => {
+        for (let i = 0; i < plats.length; i++) {
+            let p = plats[i];
+            if (Math.abs(p.x - this.x) > 800) continue;
+
             // Controlla se siamo allineati orizzontalmente
             if (this.x < p.x + p.width - 5 && this.x + this.width > p.x + 5) {
                 // Atterraggio (dall'alto)
@@ -1331,7 +1361,8 @@ class Player {
                     }
                 }
             }
-        });
+        }
+
 
         // --- GESTIONE SQUASH & STRETCH (Atterraggio) ---
         if (this.isGrounded && !this.wasGrounded) {
@@ -2819,8 +2850,22 @@ function update(dt) {
 
     if (player.isHitTimer > 0) player.isHitTimer -= dt;
 
-    // Pulizia cadaveri
-    enemies = enemies.filter(z => !(z.state === 'dead' && z.y > player.y + 1000));
+    // --- PULIZIA RAM SISTEMA (Garbage Collection) ---
+    // 1. Rimuove nemici morti che hanno finito l'animazione o sono lontanissimi
+    enemies = enemies.filter(z => {
+        let dist = Math.abs(z.x - player.x);
+        // Despawn se troppo lontano (> 2500px) per risparmiare CPU/RAM
+        if (dist > 2500) return false;
+        // Rimuove se morto e svanito del tutto
+        if (z.state === 'dead' && z.deadOpacity <= 0) return false;
+        return true;
+    });
+
+    // 2. Limita il numero di particelle per evitare crash GPU (Max 100)
+    if (particles.length > 100) {
+        particles.splice(0, particles.length - 100);
+    }
+
 
     // 4. CAMERAMAN DIGITALE (Coordinate Logiche - Calcolate in Draw per supporto Scaling)
     // Rimosso da qui per centralizzare la logica di scaling in draw()
