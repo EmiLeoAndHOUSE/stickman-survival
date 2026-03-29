@@ -160,6 +160,11 @@ function playSound(type, sourceX = null, sourceY = null) {
 const startBtn = document.getElementById('startBtn');
 if (startBtn) {
     startBtn.addEventListener('click', () => {
+        // Su mobile proviamo il fullscreen immediato per immersività
+        if (window.innerWidth < 1024) {
+            document.documentElement.requestFullscreen().catch(() => {});
+        }
+        
         initAudio(); // Sblocca l'audio
         document.getElementById('mainMenu').style.opacity = '0';
         setTimeout(() => {
@@ -168,6 +173,7 @@ if (startBtn) {
         }, 500);
     });
 }
+
 
 // ==========================================
 // 1. ASSET LOADER (Gestione Immagini in Parallelo)
@@ -2895,6 +2901,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveBtn = document.getElementById('saveScoreBtn');
     const nameInput = document.getElementById('playerNameInput');
     const restartBtn = document.getElementById('restartBtn');
+
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    if (fullscreenBtn) {
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log("Errore Fullscreen:", err);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        });
+    }
 
     if (saveBtn) {
         saveBtn.addEventListener('click', () => {

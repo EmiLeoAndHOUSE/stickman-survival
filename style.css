@@ -258,6 +258,46 @@ canvas {
     #touchHUD { display: block !important; }
 }
 
+/* --- FULLSCREEN BUTTON --- */
+#fullscreenBtn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    background: rgba(0, 255, 204, 0.2);
+    border: 2px solid #00ffcc;
+    color: #00ffcc;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+    transition: all 0.2s;
+}
+
+#fullscreenBtn:hover {
+    background: rgba(0, 255, 204, 0.4);
+    box-shadow: 0 0 15px #00ffcc;
+}
+
+#fullscreenBtn:active {
+    transform: scale(0.9);
+}
+
+@media (max-width: 1024px) {
+    #fullscreenBtn {
+        top: auto;
+        bottom: 20px;
+        right: 20px;
+        width: 60px;
+        height: 60px;
+    }
+}
+
+
 
 
 
