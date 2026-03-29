@@ -1,0 +1,17 @@
+{
+  "name": "Stickman Survival: Rebirth",
+  "short_name": "StickmanR",
+  "description": "Un gioco arcade di sopravvivenza procedurale.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#050510",
+  "theme_color": "#00ffcc",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "player.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
