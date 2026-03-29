@@ -5,17 +5,17 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-let width, height;
-const V_HEIGHT = 1000;
-let V_WIDTH = 1600;
+// 1440x810 è un ottimo compromesso tra Desktop e Mobile (16:9)
+let width = 1440;
+let height = 810;
 
 function resize() {
-    width = window.innerWidth;
-    height = window.innerHeight;
-    canvas.width = width;
-    canvas.height = height;
-    V_WIDTH = width * (V_HEIGHT / height);
+    // La risoluzione INTERNA del canvas rimane fissa per stabilità
+    canvas.width = 1440;
+    canvas.height = 810;
+    // Il CSS (aggiunto in style.css) si occupa di adattarlo allo schermo
 }
+
 
 window.addEventListener('resize', resize);
 resize();
@@ -224,26 +224,40 @@ window.addEventListener('mouseup', e => {
 window.addEventListener('contextmenu', e => e.preventDefault());
 
 // --- SISTEMA DI CONTROLLO TOUCH (Virtual Joystick & Buttons) ---
+function getTouchCoords(e) {
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+        x: (touch.clientX - rect.left) * scaleX,
+        y: (touch.clientY - rect.top) * scaleY
+    };
+}
+
 function initTouch() {
     const joystickBase = document.getElementById('joystickBase');
     const joystickKnob = document.getElementById('joystickKnob');
     if (!joystickBase) return;
 
     let joystickActive = false;
-    let baseRect = null;
 
     const handleJoystick = (e) => {
         if (!joystickActive) return;
-        const touch = e.touches[0];
-        if (!baseRect) baseRect = joystickBase.getBoundingClientRect();
+        const coords = getTouchCoords(e);
+        const rect = joystickBase.getBoundingClientRect(); // Questo è ancora fisico
+        const scaleX = canvas.width / rect.width; // Non utile qui dato che il joystick è relativo
         
-        const centerX = baseRect.left + baseRect.width / 2;
-        const centerY = baseRect.top + baseRect.height / 2;
+        // Per semplicità usiamo le coordinate fisiche relative per il joystick
+        const touch = e.touches[0];
+        const bRect = joystickBase.getBoundingClientRect();
+        const centerX = bRect.left + bRect.width / 2;
+        const centerY = bRect.top + bRect.height / 2;
         
         const dx = touch.clientX - centerX;
         const dy = touch.clientY - centerY;
         const dist = Math.sqrt(dx*dx + dy*dy);
-        const maxDist = baseRect.width / 2;
+        const maxDist = bRect.width / 2;
         
         const angle = Math.atan2(dy, dx);
         const limitedDist = Math.min(dist, maxDist);
@@ -253,10 +267,10 @@ function initTouch() {
         
         joystickKnob.style.transform = `translate(${moveX}px, ${moveY}px)`;
         
-        // Mappatura sui tasti gioco (A e D)
         keys['KeyA'] = (moveX < -20);
         keys['KeyD'] = (moveX > 20);
     };
+
 
     joystickBase.addEventListener('touchstart', (e) => {
         joystickActive = true;
@@ -736,10 +750,10 @@ class World {
         let hillOffsetX = (camera.x * 0.2) % 800;
 
         ctx.fillStyle = '#3E2723';
-        ctx.fillRect(0, horizonY, V_WIDTH, 2000);
+        ctx.fillRect(0, horizonY, width, 2000);
 
         ctx.beginPath();
-        for (let i = -1; i <= Math.ceil(V_WIDTH / 800) + 1; i++) {
+        for (let i = -1; i <= Math.ceil(width / 800) + 1; i++) {
             let cx = (i * 800) - hillOffsetX + 400;
             ctx.ellipse(cx, horizonY + 110, 500, 200, 0, Math.PI, 0);
         }
@@ -750,7 +764,7 @@ class World {
             ctx.save();
             ctx.translate(-hillOffsetX, 0);
             ctx.beginPath();
-            for (let i = -2; i <= Math.ceil(V_WIDTH / 800) + 2; i++) {
+            for (let i = -2; i <= Math.ceil(width / 800) + 2; i++) {
                 let cx = (i * 800) + 400;
                 ctx.ellipse(cx, horizonY + 80, 500, 200, 0, Math.PI, 0);
             }
@@ -759,7 +773,7 @@ class World {
         } else {
             ctx.fillStyle = '#4a7023';
             ctx.beginPath();
-            for (let i = -1; i <= Math.ceil(V_WIDTH / 800) + 1; i++) {
+            for (let i = -1; i <= Math.ceil(width / 800) + 1; i++) {
                 let cx = (i * 800) - hillOffsetX + 400;
                 ctx.ellipse(cx, horizonY + 80, 500, 200, 0, Math.PI, 0);
             }
@@ -768,26 +782,26 @@ class World {
 
         ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
         ctx.beginPath();
-        for (let i = -1; i <= Math.ceil(V_WIDTH / 800) + 1; i++) {
+        for (let i = -1; i <= Math.ceil(width / 800) + 1; i++) {
             let cx = (i * 800) - hillOffsetX + 400;
             ctx.ellipse(cx, horizonY + 80, 500, 200, 0, Math.PI, 0);
         }
         ctx.fill();
-        ctx.fillRect(0, horizonY + 80, V_WIDTH, 2000);
+        ctx.fillRect(0, horizonY + 80, width, 2000);
 
         // LAYER MEDIANO
         let midOffsetX = (camera.x * parallaxFactor) % 800;
         let midHorizonY = horizonY + 30;
 
         ctx.fillStyle = '#26150D';
-        ctx.fillRect(0, midHorizonY, V_WIDTH, 2000);
+        ctx.fillRect(0, midHorizonY, width, 2000);
 
         if (typeof gfx !== 'undefined' && gfx.grass && gfx.grass.complete && gfx.grass.naturalWidth > 0) {
             ctx.fillStyle = ctx.createPattern(gfx.grass, 'repeat');
             ctx.save();
             ctx.translate(-midOffsetX, 0);
             ctx.beginPath();
-            for (let i = -2; i <= Math.ceil(V_WIDTH / 800) + 2; i++) {
+            for (let i = -2; i <= Math.ceil(width / 800) + 2; i++) {
                 let cx = (i * 800) + 400;
                 ctx.ellipse(cx, midHorizonY + 5, 450, 40, 0, Math.PI, 0);
             }
@@ -795,12 +809,12 @@ class World {
             ctx.restore();
         } else {
             ctx.fillStyle = '#3a6015';
-            ctx.fillRect(0, midHorizonY - 10, V_WIDTH, 10);
+            ctx.fillRect(0, midHorizonY - 10, width, 10);
         }
 
         ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
         ctx.beginPath();
-        for (let i = -1; i <= Math.ceil(V_WIDTH / 800) + 1; i++) {
+        for (let i = -1; i <= Math.ceil(width / 800) + 1; i++) {
             let cx = (i * 800) - midOffsetX + 400;
             ctx.ellipse(cx, midHorizonY + 5, 450, 40, 0, Math.PI, 0);
         }
@@ -810,7 +824,7 @@ class World {
             let screenX = bg.x - (camera.x * parallaxFactor);
             let screenY = bg.y - camera.y + 30;
 
-            if (screenX + bg.width > 0 && screenX < V_WIDTH) {
+            if (screenX + bg.width > 0 && screenX < width) {
                 if (bg.type === 'tree') {
                     let cx = screenX + bg.width / 2;
                     let cy = screenY;
@@ -863,7 +877,7 @@ class World {
                 let maskW = plat.width + 240;
                 let maskH = 2000;
 
-                if (maskX + maskW > 0 && maskX < V_WIDTH) {
+                if (maskX + maskW > 0 && maskX < width) {
                     ctx.fillStyle = '#050505';
                     ctx.fillRect(maskX, maskY, maskW, maskH);
 
@@ -896,7 +910,7 @@ class World {
             let screenX = plat.x - camera.x;
             let screenY = plat.y - camera.y;
 
-            if (screenX + plat.width > 0 && screenX < V_WIDTH) {
+            if (screenX + plat.width > 0 && screenX < width) {
 
                 if (plat.isCave || plat.isWall) {
                     ctx.save();
@@ -939,7 +953,7 @@ class World {
             let screenX = dec.x - camera.x;
             let screenY = dec.y - camera.y;
 
-            if (screenX > -200 && screenX < V_WIDTH + 200) {
+            if (screenX > -200 && screenX < width + 200) {
                 if (dec.type === 'stalactite') {
                     ctx.fillStyle = '#0F0F0F';
                     let steps = 4;
@@ -1030,7 +1044,7 @@ class World {
             let screenX = b.x - camera.x;
             let screenY = b.y - camera.y;
 
-            if (screenX + b.width > 0 && screenX < V_WIDTH) {
+            if (screenX + b.width > 0 && screenX < width) {
                 if (b.type === 'house') {
                     this.renderFantasyHouse(ctx, screenX, screenY, b.width, b.height, false, b.looted);
                 } else if (b.type === 'castle') {
@@ -2914,7 +2928,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateMiniLeaderboard();
 });
 
-function drawDarkness(ctx, vWidth, vHeight) {
+function drawDarkness(ctx) {
     let darknessAlpha = 0;
 
     // Buio Superficie
@@ -2928,8 +2942,8 @@ function drawDarkness(ctx, vWidth, vHeight) {
     }
 
     if (darknessAlpha > 0) {
-        let playerScreenX = player.x - camera.x;
-        let playerScreenY = player.y - camera.y;
+        let playerScreenX = player.x - camera.x + player.width / 2;
+        let playerScreenY = player.y - camera.y + player.height / 2;
 
         let grad = ctx.createRadialGradient(
             playerScreenX, playerScreenY, 40,
@@ -2941,20 +2955,17 @@ function drawDarkness(ctx, vWidth, vHeight) {
         grad.addColorStop(1, `rgba(0,0,0, ${darknessAlpha})`);
 
         ctx.fillStyle = grad;
-        // Copriamo l'intero spazio virtuale
-        ctx.fillRect(camera.x - 500, camera.y - 500, vWidth + 1000, vHeight + 1000); 
+        ctx.fillRect(0, 0, width, height);
     }
 }
 
 function draw() {
-    const scale = height / V_HEIGHT;
-
-    // Aggiornamento Camera basato su dimensioni virtuali
-    camera.x = player.x - V_WIDTH / 2;
-    camera.y = player.y - V_HEIGHT / 1.5;
+    // Aggiornamento Camera basato su dimensioni fisse (Già stabilito 1440x810)
+    camera.x = player.x - width / 2;
+    camera.y = player.y - height / 1.5;
 
     let windSpeed = 25;
-    let cloudOffset = ((Date.now() / 1000) * windSpeed) % V_WIDTH;
+    let cloudOffset = ((Date.now() / 1000) * windSpeed) % width;
 
     let dayAlpha = 1;
     if (timeOfDay >= 5 && timeOfDay <= 7) {
@@ -2966,25 +2977,23 @@ function draw() {
     }
     dayAlpha = Math.max(0, Math.min(1, dayAlpha));
 
+    // Pulizia Sfondo (Fisica 1440x810)
     ctx.fillStyle = '#050510';
     ctx.fillRect(0, 0, width, height);
-
-    ctx.save();
-    ctx.scale(scale, scale);
 
     if (gfx.sky_night.complete && gfx.sky_night.naturalWidth > 0) {
         ctx.globalAlpha = 1 - dayAlpha;
         if (ctx.globalAlpha > 0) {
-            ctx.drawImage(gfx.sky_night, -cloudOffset, 0, V_WIDTH, V_HEIGHT);
-            ctx.drawImage(gfx.sky_night, V_WIDTH - cloudOffset, 0, V_WIDTH, V_HEIGHT);
+            ctx.drawImage(gfx.sky_night, -cloudOffset, 0, width, height);
+            ctx.drawImage(gfx.sky_night, width - cloudOffset, 0, width, height);
         }
     }
 
     if (gfx.sky_day.complete && gfx.sky_day.naturalWidth > 0) {
         ctx.globalAlpha = dayAlpha;
         if (ctx.globalAlpha > 0) {
-            ctx.drawImage(gfx.sky_day, -cloudOffset, 0, V_WIDTH, V_HEIGHT);
-            ctx.drawImage(gfx.sky_day, V_WIDTH - cloudOffset, 0, V_WIDTH, V_HEIGHT);
+            ctx.drawImage(gfx.sky_day, -cloudOffset, 0, width, height);
+            ctx.drawImage(gfx.sky_day, width - cloudOffset, 0, width, height);
         }
     }
 
@@ -2996,7 +3005,7 @@ function draw() {
     particles.forEach(p => {
         let sx = p.x - camera.x;
         let sy = p.y - camera.y;
-        if (sx > -50 && sx < V_WIDTH + 50) {
+        if (sx > -50 && sx < width + 50) {
             ctx.globalAlpha = p.life / 1.2;
             ctx.fillStyle = p.color;
             ctx.fillRect(sx, sy, p.size, p.size);
@@ -3013,7 +3022,7 @@ function draw() {
     player.draw(ctx, camera);
     ctx.globalAlpha = 1.0; 
 
-    drawDarkness(ctx, V_WIDTH, V_HEIGHT);
+    drawDarkness(ctx);
 
     if (currentInteractable && !currentInteractable.looted) {
         ctx.fillStyle = '#FFFFFF';
@@ -3031,9 +3040,8 @@ function draw() {
         ctx.shadowColor = "transparent";
         ctx.textAlign = 'left';
     }
-
-    ctx.restore();
 }
+
 
 
 
