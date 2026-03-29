@@ -6,13 +6,17 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 let width, height;
+const V_HEIGHT = 1000;
+let V_WIDTH = 1600;
 
 function resize() {
     width = window.innerWidth;
     height = window.innerHeight;
     canvas.width = width;
     canvas.height = height;
+    V_WIDTH = width * (V_HEIGHT / height);
 }
+
 window.addEventListener('resize', resize);
 resize();
 
@@ -732,10 +736,10 @@ class World {
         let hillOffsetX = (camera.x * 0.2) % 800;
 
         ctx.fillStyle = '#3E2723';
-        ctx.fillRect(0, horizonY, canvas.width, 2000);
+        ctx.fillRect(0, horizonY, V_WIDTH, 2000);
 
         ctx.beginPath();
-        for (let i = -1; i <= Math.ceil(canvas.width / 800) + 1; i++) {
+        for (let i = -1; i <= Math.ceil(V_WIDTH / 800) + 1; i++) {
             let cx = (i * 800) - hillOffsetX + 400;
             ctx.ellipse(cx, horizonY + 110, 500, 200, 0, Math.PI, 0);
         }
@@ -746,7 +750,7 @@ class World {
             ctx.save();
             ctx.translate(-hillOffsetX, 0);
             ctx.beginPath();
-            for (let i = -2; i <= Math.ceil(canvas.width / 800) + 2; i++) {
+            for (let i = -2; i <= Math.ceil(V_WIDTH / 800) + 2; i++) {
                 let cx = (i * 800) + 400;
                 ctx.ellipse(cx, horizonY + 80, 500, 200, 0, Math.PI, 0);
             }
@@ -755,7 +759,7 @@ class World {
         } else {
             ctx.fillStyle = '#4a7023';
             ctx.beginPath();
-            for (let i = -1; i <= Math.ceil(canvas.width / 800) + 1; i++) {
+            for (let i = -1; i <= Math.ceil(V_WIDTH / 800) + 1; i++) {
                 let cx = (i * 800) - hillOffsetX + 400;
                 ctx.ellipse(cx, horizonY + 80, 500, 200, 0, Math.PI, 0);
             }
@@ -764,26 +768,26 @@ class World {
 
         ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
         ctx.beginPath();
-        for (let i = -1; i <= Math.ceil(canvas.width / 800) + 1; i++) {
+        for (let i = -1; i <= Math.ceil(V_WIDTH / 800) + 1; i++) {
             let cx = (i * 800) - hillOffsetX + 400;
             ctx.ellipse(cx, horizonY + 80, 500, 200, 0, Math.PI, 0);
         }
         ctx.fill();
-        ctx.fillRect(0, horizonY + 80, canvas.width, 2000);
+        ctx.fillRect(0, horizonY + 80, V_WIDTH, 2000);
 
         // LAYER MEDIANO
         let midOffsetX = (camera.x * parallaxFactor) % 800;
         let midHorizonY = horizonY + 30;
 
         ctx.fillStyle = '#26150D';
-        ctx.fillRect(0, midHorizonY, canvas.width, 2000);
+        ctx.fillRect(0, midHorizonY, V_WIDTH, 2000);
 
         if (typeof gfx !== 'undefined' && gfx.grass && gfx.grass.complete && gfx.grass.naturalWidth > 0) {
             ctx.fillStyle = ctx.createPattern(gfx.grass, 'repeat');
             ctx.save();
             ctx.translate(-midOffsetX, 0);
             ctx.beginPath();
-            for (let i = -2; i <= Math.ceil(canvas.width / 800) + 2; i++) {
+            for (let i = -2; i <= Math.ceil(V_WIDTH / 800) + 2; i++) {
                 let cx = (i * 800) + 400;
                 ctx.ellipse(cx, midHorizonY + 5, 450, 40, 0, Math.PI, 0);
             }
@@ -791,12 +795,12 @@ class World {
             ctx.restore();
         } else {
             ctx.fillStyle = '#3a6015';
-            ctx.fillRect(0, midHorizonY - 10, canvas.width, 10);
+            ctx.fillRect(0, midHorizonY - 10, V_WIDTH, 10);
         }
 
         ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
         ctx.beginPath();
-        for (let i = -1; i <= Math.ceil(canvas.width / 800) + 1; i++) {
+        for (let i = -1; i <= Math.ceil(V_WIDTH / 800) + 1; i++) {
             let cx = (i * 800) - midOffsetX + 400;
             ctx.ellipse(cx, midHorizonY + 5, 450, 40, 0, Math.PI, 0);
         }
@@ -806,7 +810,7 @@ class World {
             let screenX = bg.x - (camera.x * parallaxFactor);
             let screenY = bg.y - camera.y + 30;
 
-            if (screenX + bg.width > 0 && screenX < canvas.width) {
+            if (screenX + bg.width > 0 && screenX < V_WIDTH) {
                 if (bg.type === 'tree') {
                     let cx = screenX + bg.width / 2;
                     let cy = screenY;
@@ -859,7 +863,7 @@ class World {
                 let maskW = plat.width + 240;
                 let maskH = 2000;
 
-                if (maskX + maskW > 0 && maskX < canvas.width) {
+                if (maskX + maskW > 0 && maskX < V_WIDTH) {
                     ctx.fillStyle = '#050505';
                     ctx.fillRect(maskX, maskY, maskW, maskH);
 
@@ -892,7 +896,7 @@ class World {
             let screenX = plat.x - camera.x;
             let screenY = plat.y - camera.y;
 
-            if (screenX + plat.width > 0 && screenX < canvas.width) {
+            if (screenX + plat.width > 0 && screenX < V_WIDTH) {
 
                 if (plat.isCave || plat.isWall) {
                     ctx.save();
@@ -935,7 +939,7 @@ class World {
             let screenX = dec.x - camera.x;
             let screenY = dec.y - camera.y;
 
-            if (screenX > -200 && screenX < canvas.width + 200) {
+            if (screenX > -200 && screenX < V_WIDTH + 200) {
                 if (dec.type === 'stalactite') {
                     ctx.fillStyle = '#0F0F0F';
                     let steps = 4;
@@ -1026,7 +1030,7 @@ class World {
             let screenX = b.x - camera.x;
             let screenY = b.y - camera.y;
 
-            if (screenX + b.width > 0 && screenX < canvas.width) {
+            if (screenX + b.width > 0 && screenX < V_WIDTH) {
                 if (b.type === 'house') {
                     this.renderFantasyHouse(ctx, screenX, screenY, b.width, b.height, false, b.looted);
                 } else if (b.type === 'castle') {
@@ -2910,9 +2914,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateMiniLeaderboard();
 });
 
-
-
-function drawDarkness(ctx, logicalWidth, logicalHeight) {
+function drawDarkness(ctx, vWidth, vHeight) {
     let darknessAlpha = 0;
 
     // Buio Superficie
@@ -2929,7 +2931,6 @@ function drawDarkness(ctx, logicalWidth, logicalHeight) {
         let playerScreenX = player.x - camera.x;
         let playerScreenY = player.y - camera.y;
 
-        // Gradient scaliato correttamente nel sistema logico
         let grad = ctx.createRadialGradient(
             playerScreenX, playerScreenY, 40,
             playerScreenX, playerScreenY, 350
@@ -2940,25 +2941,20 @@ function drawDarkness(ctx, logicalWidth, logicalHeight) {
         grad.addColorStop(1, `rgba(0,0,0, ${darknessAlpha})`);
 
         ctx.fillStyle = grad;
-        ctx.fillRect(camera.x, camera.y - 500, logicalWidth + 1000, logicalHeight + 1000); 
-        // Nota: riempiamo un'area grande intorno alla camera nel sistema logico
+        // Copriamo l'intero spazio virtuale
+        ctx.fillRect(camera.x - 500, camera.y - 500, vWidth + 1000, vHeight + 1000); 
     }
 }
 
-
 function draw() {
-    // --- LOGICA DI SCALING RESPONSIVO (Fix Zoom Mobile) ---
-    const targetHeight = 850; // Altezza logica di riferimento (Desktop-style)
-    const scale = height / targetHeight;
-    const logicalWidth = width / scale;
-    const logicalHeight = targetHeight;
+    const scale = height / V_HEIGHT;
 
-    // Aggiornamento Camera basato su dimensioni logiche
-    camera.x = player.x - logicalWidth / 2;
-    camera.y = player.y - logicalHeight / 1.5;
+    // Aggiornamento Camera basato su dimensioni virtuali
+    camera.x = player.x - V_WIDTH / 2;
+    camera.y = player.y - V_HEIGHT / 1.5;
 
     let windSpeed = 25;
-    let cloudOffset = ((Date.now() / 1000) * windSpeed) % logicalWidth;
+    let cloudOffset = ((Date.now() / 1000) * windSpeed) % V_WIDTH;
 
     let dayAlpha = 1;
     if (timeOfDay >= 5 && timeOfDay <= 7) {
@@ -2970,41 +2966,37 @@ function draw() {
     }
     dayAlpha = Math.max(0, Math.min(1, dayAlpha));
 
-    // Sfondo Nero (Fisico - copre tutto)
     ctx.fillStyle = '#050510';
     ctx.fillRect(0, 0, width, height);
 
     ctx.save();
     ctx.scale(scale, scale);
 
-    // DISEGNO SKY (Logico)
     if (gfx.sky_night.complete && gfx.sky_night.naturalWidth > 0) {
         ctx.globalAlpha = 1 - dayAlpha;
         if (ctx.globalAlpha > 0) {
-            ctx.drawImage(gfx.sky_night, -cloudOffset, 0, logicalWidth, logicalHeight);
-            ctx.drawImage(gfx.sky_night, logicalWidth - cloudOffset, 0, logicalWidth, logicalHeight);
+            ctx.drawImage(gfx.sky_night, -cloudOffset, 0, V_WIDTH, V_HEIGHT);
+            ctx.drawImage(gfx.sky_night, V_WIDTH - cloudOffset, 0, V_WIDTH, V_HEIGHT);
         }
     }
 
     if (gfx.sky_day.complete && gfx.sky_day.naturalWidth > 0) {
         ctx.globalAlpha = dayAlpha;
         if (ctx.globalAlpha > 0) {
-            ctx.drawImage(gfx.sky_day, -cloudOffset, 0, logicalWidth, logicalHeight);
-            ctx.drawImage(gfx.sky_day, logicalWidth - cloudOffset, 0, logicalWidth, logicalHeight);
+            ctx.drawImage(gfx.sky_day, -cloudOffset, 0, V_WIDTH, V_HEIGHT);
+            ctx.drawImage(gfx.sky_day, V_WIDTH - cloudOffset, 0, V_WIDTH, V_HEIGHT);
         }
     }
 
     ctx.globalAlpha = 1.0;
 
-    // Composizione Ordine Elementi
     world.drawParallax(ctx, camera);
     world.drawForeground(ctx, camera);
 
-    // 3.2 DISEGNO PARTICELLE
     particles.forEach(p => {
         let sx = p.x - camera.x;
         let sy = p.y - camera.y;
-        if (sx > -50 && sx < logicalWidth + 50) {
+        if (sx > -50 && sx < V_WIDTH + 50) {
             ctx.globalAlpha = p.life / 1.2;
             ctx.fillStyle = p.color;
             ctx.fillRect(sx, sy, p.size, p.size);
@@ -3015,16 +3007,14 @@ function draw() {
     allies.forEach(a => a.draw(ctx, camera));
     enemies.forEach(z => z.draw(ctx, camera)); 
 
-    // Lampeggio visura Sofferenza
     if (player.isHitTimer && player.isHitTimer > 0) {
         ctx.globalAlpha = 0.5 + Math.abs(Math.sin(Date.now() / 60)) * 0.5;
     }
     player.draw(ctx, camera);
     ctx.globalAlpha = 1.0; 
 
-    drawDarkness(ctx, logicalWidth, logicalHeight);
+    drawDarkness(ctx, V_WIDTH, V_HEIGHT);
 
-    // Sistema HUD Overlay (Prompt Porta Casa/Castello)
     if (currentInteractable && !currentInteractable.looted) {
         ctx.fillStyle = '#FFFFFF';
         ctx.font = 'bold 18px Arial';
@@ -3042,8 +3032,9 @@ function draw() {
         ctx.textAlign = 'left';
     }
 
-    ctx.restore(); // Fine scaling logico
+    ctx.restore();
 }
+
 
 
 // IL GRANDE PULSANTE START (Loop a 60 FPS o Refresh Sync)
