@@ -1375,6 +1375,11 @@ class Player {
         let screenX = this.x - camera.x;
         let screenY = this.y - camera.y;
 
+        // --- CULLING PRESTAZIONI: Non disegnare se fuori schermo ---
+        if (screenX + this.width + 20 < 0 || screenX - 20 > width || screenY + this.height + 20 < 0 || screenY - 50 > height) {
+            return;
+        }
+
         // --- 1. RENDERING SCIA SPADA (Coordinate Mondo) ---
         if (this.trail.length > 0) {
             ctx.save();
@@ -2020,7 +2025,12 @@ class Zombie {
         this.wasGrounded = false;
         this.deadRotation = 0;
         this.deadOpacity = 1;
+
+        // --- OTTIMIZZAZIONE AI PRESTAZIONI ---
+        this.aiUpdateTimer = Math.random() * 0.2; // Offset iniziale per distribuire il carico
+        this.aiBestTargetX = x;
     }
+
 
     update(dt, world, player) {
         if (this.isHit > 0) {
@@ -2124,79 +2134,102 @@ class Zombie {
                     this.timer = 2.5;
                     this.vx = 0;
                 } else {
-                    // --- SISTEMA DI NAVIGAZIONE INTELLIGENTE (Fix Ping-Pong) ---
+                    // --- SISTEMA DI NAVIGAZIONE INTELLIGENTE (THROTTLED PER PERFORMANCE) ---
                     let targetX = player.x;
                     let pCenterX = this.x + this.width / 2;
-                    let distToPlayerY = Math.abs(player.y - this.y);
-                    let isTrappedInCave = this.y > 650;
+                    let distToPlayer = Math.abs(player.x - this.x);
+                    
+                    // OTTIMIZZAZIONE: Se lo zombie è lontanissimo, non calcola nulla
+                    if (distToPlayer > 1200 && !this.isClimbing) {
+                        this.vx *= 0.8;
+                        return;
+                    }
 
-                    let playerInCave = player.y > 650;
+                    // Eseguiamo i calcoli costosi solo occasionalmente
+                    this.aiUpdateTimer -= dt;
+                    if (this.aiUpdateTimer <= 0) {
+                        this.aiUpdateTimer = 0.2 + Math.random() * 0.1; // Ogni ~15 frame
 
-                    let bestPathX = null;
-                    if (distToPlayerY > 100) {
-                        let minPathDist = 4000;
+                        let distToPlayerY = Math.abs(player.y - this.y);
+                        let isTrappedInCave = this.y > 650;
+                        let playerInCave = player.y > 650;
 
-                        // 1. Cerca la scala più vicina che porti nella direzione giusta
-                        world.interactables.forEach(i => {
-                            if (i.type === 'ladder') {
-                                // SICUREZZA: Se è giorno e siamo sotto terra, non prendiamo scale verso l'alto (Suicidio)
-                                let isSunlightDanger = (timeOfDay > 5 && timeOfDay < 19 && this.y > 650 && i.y < 650);
-                                if (this.type === 'white' && isSunlightDanger && !playerInCave) return;
+                        let bestPathX = null;
+                        if (distToPlayerY > 100) {
+                            let minPathDist = 4000;
 
-                                let connectsToPlayer = (player.y < this.y) ? (i.y < this.y - 40) : (i.y + i.height > this.y + 40);
-                                if (connectsToPlayer) {
-                                    let d = Math.abs(i.x + i.width / 2 - pCenterX);
-                                    if (d < minPathDist) {
-                                        minPathDist = d;
-                                        bestPathX = i.x + i.width / 2;
+                            // 1. Cerca la scala (Loop Classico per velocità)
+                            const items = world.interactables;
+                            for (let i = 0; i < items.length; i++) {
+                                let item = items[i];
+                                if (item.type === 'ladder') {
+                                    let isSunlightDanger = (timeOfDay > 5 && timeOfDay < 19 && this.y > 650 && item.y < 650);
+                                    if (this.type === 'white' && isSunlightDanger && !playerInCave) continue;
+
+                                    let connectsToPlayer = (player.y < this.y) ? (item.y < this.y - 40) : (item.y + item.height > this.y + 40);
+                                    if (connectsToPlayer) {
+                                        let d = Math.abs(item.x + item.width / 2 - pCenterX);
+                                        if (d < minPathDist) {
+                                            minPathDist = d;
+                                            bestPathX = item.x + item.width / 2;
+                                        }
                                     }
                                 }
                             }
-                        });
 
-                        // 2. Se non ci sono scale o sono lontane, cerca mensole nelle grotte
-                        if (isTrappedInCave && (!bestPathX || minPathDist > 800)) {
-                            world.platforms.forEach(p => {
-                                if (p.isStairs || (p.y < this.y - 20 && p.y > player.y - 50)) {
-                                    let d = Math.abs(p.x + p.width / 2 - pCenterX);
-                                    if (d < minPathDist) {
-                                        minPathDist = d;
-                                        bestPathX = p.x + p.width / 2;
+                            // 2. Se non ci sono scale, cerca piattaforme
+                            if (isTrappedInCave && (!bestPathX || minPathDist > 800)) {
+                                const plats = world.platforms;
+                                for (let j = 0; j < plats.length; j++) {
+                                    let p = plats[j];
+                                    if (p.isStairs || (p.y < this.y - 20 && p.y > player.y - 50)) {
+                                        let d = Math.abs(p.x + p.width / 2 - pCenterX);
+                                        if (d < minPathDist) {
+                                            minPathDist = d;
+                                            bestPathX = p.x + p.width / 2;
+                                        }
                                     }
                                 }
-                            });
-                        }
+                            }
 
-                        // Se abbiamo trovato un percorso, lo seguiamo ossessivamente finché non siamo vicini
-                        if (bestPathX !== null) {
-                            targetX = bestPathX;
+                            if (bestPathX !== null) {
+                                this.aiBestTargetX = bestPathX;
+                            } else {
+                                this.aiBestTargetX = player.x;
+                            }
+                        } else {
+                            this.aiBestTargetX = player.x;
                         }
                     }
 
+                    targetX = this.aiBestTargetX;
+
                     // --- IA DI NAVIGAZIONE CON SCALE (Lancio Arrampicata) ---
                     let nearLadder = null;
-                    world.interactables.forEach(i => {
-                        if (i.type === 'ladder') {
-                            // Hitbox di aggancio scala leggermente più generosa per gli zombie
-                            if (pCenterX > i.x - 30 && pCenterX < i.x + i.width + 30) {
-                                if (this.y + this.height > i.y && this.y < i.y + i.height) {
-                                    nearLadder = i;
+                    const items = world.interactables;
+                    for (let i = 0; i < items.length; i++) {
+                        let item = items[i];
+                        if (item.type === 'ladder') {
+                            if (pCenterX > item.x - 30 && pCenterX < item.x + item.width + 30) {
+                                if (this.y + this.height > item.y && this.y < item.y + item.height) {
+                                    nearLadder = item;
+                                    break;
                                 }
                             }
                         }
-                    });
+                    }
 
                     // Decisione: Salire o camminare?
                     let heightDiff = player.y - this.y;
                     let nearTop = nearLadder && (this.y < nearLadder.y + 20 && heightDiff < 0);
 
-                    // Se siamo vicini a una scala e dobbiamo cambiare livello verticale
                     if (nearLadder && !nearTop && this.climbTimer <= 0 && this.isHit <= 0 && Math.abs(heightDiff) > 20 && Math.abs(nearLadder.x + nearLadder.width / 2 - pCenterX) < 60) {
                         this.isClimbing = true;
                         this.x += (nearLadder.x + nearLadder.width / 2 - pCenterX) * 0.2; // Centratura
                         this.vx = 0;
                         this.vy = (heightDiff > 0) ? 160 : -180; // Salita leggermente più rapida
                     } else if (this.isClimbing) {
+
                         // --- LOGICA DI SBARCO (Hoping off) ---
                         // Se siamo arrivati in cima o vicini al target, facciamo un balzello per atterrare sulla piattaforma
                         if (nearTop || Math.abs(heightDiff) <= 25) {
