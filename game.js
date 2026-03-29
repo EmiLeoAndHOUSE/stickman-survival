@@ -1375,7 +1375,9 @@ class Player {
             ctx.strokeStyle = '#00FFFF'; // Ciano Neon
             ctx.lineWidth = 12;
             ctx.lineCap = 'round';
-            for (let i = 0; i < this.trail.length; i++) {
+            
+            // Loop inverso per evitare Memory Leak con splice
+            for (let i = this.trail.length - 1; i >= 0; i--) {
                 let t = this.trail[i];
                 t.life -= 0.05;
                 if (t.life <= 0) {
@@ -1385,13 +1387,16 @@ class Player {
                 ctx.globalAlpha = t.life * 0.8;
                 let tx = t.x - camera.x;
                 let ty = t.y - camera.y;
-                if (i === 0) ctx.moveTo(tx, ty);
+                
+                // MoveTo/LineTo ha senso solo se gli elementi rimasti sono ordinati
+                if (i === this.trail.length - 1) ctx.moveTo(tx, ty);
                 else ctx.lineTo(tx, ty);
             }
             ctx.stroke();
             ctx.restore();
             ctx.globalAlpha = 1.0;
         }
+
 
         ctx.save();
 
@@ -1786,7 +1791,9 @@ class HeroAlly {
             ctx.strokeStyle = '#00FFFF'; 
             ctx.lineWidth = 12;
             ctx.lineCap = 'round';
-            for (let i = 0; i < this.trail.length; i++) {
+
+            // Loop inverso per evitare Memory Leak
+            for (let i = this.trail.length - 1; i >= 0; i--) {
                 let t = this.trail[i];
                 t.life -= 0.05;
                 if (t.life <= 0) {
@@ -1796,13 +1803,14 @@ class HeroAlly {
                 ctx.globalAlpha = t.life * 0.8;
                 let tx = t.x - camera.x;
                 let ty = t.y - camera.y;
-                if (i === 0) ctx.moveTo(tx, ty);
+                if (i === this.trail.length - 1) ctx.moveTo(tx, ty);
                 else ctx.lineTo(tx, ty);
             }
             ctx.stroke();
             ctx.restore();
             ctx.globalAlpha = 1.0;
         }
+
 
         ctx.save();
 
