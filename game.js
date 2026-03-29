@@ -276,7 +276,10 @@ function initTouch() {
         
         keys['KeyA'] = (moveX < -20);
         keys['KeyD'] = (moveX > 20);
+        keys['KeyW'] = (moveY < -20); // Supporto Scale Su
+        keys['KeyS'] = (moveY > 20);  // Supporto Scale Giù
     };
+
 
 
     joystickBase.addEventListener('touchstart', (e) => {
@@ -293,12 +296,15 @@ function initTouch() {
         }
     }, {passive: false});
 
-    window.addEventListener('touchend', () => {
+    joystickBase.addEventListener('touchend', () => {
         joystickActive = false;
         joystickKnob.style.transform = `translate(0, 0)`;
         keys['KeyA'] = false;
         keys['KeyD'] = false;
+        keys['KeyW'] = false;
+        keys['KeyS'] = false;
     });
+
 
     // Azioni Pulsanti
     const mapBtn = (id, keyCode) => {
@@ -1264,8 +1270,9 @@ class Player {
             this.vy = this.jumpPower * 0.9; // Secondo salto leggermente più debole per realismo
             this.hasDoubleJumped = true;
             createDust(this.x + this.width / 2, this.y + this.height, 5); // Feedback visivo "puff"
-            keys['Space'] = false; // Forza il rilascio per non spammare
+            // Su mobile non vogliamo resettare Space qui se il tasto è ancora tenuto!
         }
+
 
         // Reset doppio salto quando si tocca terra (gestito nella collisione sotto)
 
