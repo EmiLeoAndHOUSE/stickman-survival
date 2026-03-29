@@ -2748,9 +2748,9 @@ function update(dt) {
     // Pulizia cadaveri
     enemies = enemies.filter(z => !(z.state === 'dead' && z.y > player.y + 1000));
 
-    // 4. CAMERAMAN DIGITALE
-    camera.x = player.x - width / 2;
-    camera.y = player.y - height / 1.5;
+    // 4. CAMERAMAN DIGITALE (Coordinate Logiche - Calcolate in Draw per supporto Scaling)
+    // Rimosso da qui per centralizzare la logica di scaling in draw()
+
 
     // 5. INTERAZIONE CON IL MONDO
     currentInteractable = null;
@@ -2912,7 +2912,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-function drawDarkness(ctx) {
+function drawDarkness(ctx, logicalWidth, logicalHeight) {
     let darknessAlpha = 0;
 
     // Buio Superficie
@@ -2920,15 +2920,16 @@ function drawDarkness(ctx) {
         darknessAlpha = 0.6;
     }
 
-    // Buio Cave Professo
+    // Buio Cave Profondo
     if (player.y >= 800) {
         darknessAlpha = 0.85;
     }
 
     if (darknessAlpha > 0) {
-        let playerScreenX = player.x - camera.x + player.width / 2;
-        let playerScreenY = player.y - camera.y + player.height / 2;
+        let playerScreenX = player.x - camera.x;
+        let playerScreenY = player.y - camera.y;
 
+        // Gradient scaliato correttamente nel sistema logico
         let grad = ctx.createRadialGradient(
             playerScreenX, playerScreenY, 40,
             playerScreenX, playerScreenY, 350
@@ -2939,13 +2940,25 @@ function drawDarkness(ctx) {
         grad.addColorStop(1, `rgba(0,0,0, ${darknessAlpha})`);
 
         ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(camera.x, camera.y - 500, logicalWidth + 1000, logicalHeight + 1000); 
+        // Nota: riempiamo un'area grande intorno alla camera nel sistema logico
     }
 }
 
+
 function draw() {
+    // --- LOGICA DI SCALING RESPONSIVO (Fix Zoom Mobile) ---
+    const targetHeight = 850; // Altezza logica di riferimento (Desktop-style)
+    const scale = height / targetHeight;
+    const logicalWidth = width / scale;
+    const logicalHeight = targetHeight;
+
+    // Aggiornamento Camera basato su dimensioni logiche
+    camera.x = player.x - logicalWidth / 2;
+    camera.y = player.y - logicalHeight / 1.5;
+
     let windSpeed = 25;
-    let cloudOffset = ((Date.now() / 1000) * windSpeed) % width;
+    let cloudOffset = ((Date.now() / 1000) * windSpeed) % logicalWidth;
 
     let dayAlpha = 1;
     if (timeOfDay >= 5 && timeOfDay <= 7) {
@@ -2957,22 +2970,27 @@ function draw() {
     }
     dayAlpha = Math.max(0, Math.min(1, dayAlpha));
 
+    // Sfondo Nero (Fisico - copre tutto)
     ctx.fillStyle = '#050510';
     ctx.fillRect(0, 0, width, height);
 
+    ctx.save();
+    ctx.scale(scale, scale);
+
+    // DISEGNO SKY (Logico)
     if (gfx.sky_night.complete && gfx.sky_night.naturalWidth > 0) {
         ctx.globalAlpha = 1 - dayAlpha;
         if (ctx.globalAlpha > 0) {
-            ctx.drawImage(gfx.sky_night, -cloudOffset, 0, width, height);
-            ctx.drawImage(gfx.sky_night, width - cloudOffset, 0, width, height);
+            ctx.drawImage(gfx.sky_night, -cloudOffset, 0, logicalWidth, logicalHeight);
+            ctx.drawImage(gfx.sky_night, logicalWidth - cloudOffset, 0, logicalWidth, logicalHeight);
         }
     }
 
     if (gfx.sky_day.complete && gfx.sky_day.naturalWidth > 0) {
         ctx.globalAlpha = dayAlpha;
         if (ctx.globalAlpha > 0) {
-            ctx.drawImage(gfx.sky_day, -cloudOffset, 0, width, height);
-            ctx.drawImage(gfx.sky_day, width - cloudOffset, 0, width, height);
+            ctx.drawImage(gfx.sky_day, -cloudOffset, 0, logicalWidth, logicalHeight);
+            ctx.drawImage(gfx.sky_day, logicalWidth - cloudOffset, 0, logicalWidth, logicalHeight);
         }
     }
 
@@ -2986,7 +3004,7 @@ function draw() {
     particles.forEach(p => {
         let sx = p.x - camera.x;
         let sy = p.y - camera.y;
-        if (sx > 0 && sx < canvas.width) {
+        if (sx > -50 && sx < logicalWidth + 50) {
             ctx.globalAlpha = p.life / 1.2;
             ctx.fillStyle = p.color;
             ctx.fillRect(sx, sy, p.size, p.size);
@@ -2995,16 +3013,16 @@ function draw() {
     ctx.globalAlpha = 1.0;
 
     allies.forEach(a => a.draw(ctx, camera));
-    enemies.forEach(z => z.draw(ctx, camera)); // L'orda prima dello Stickman
+    enemies.forEach(z => z.draw(ctx, camera)); 
 
-    // Lampeggio visura Sofferenza (Quando lo Zombie morde l'oscurità sanguina!)
+    // Lampeggio visura Sofferenza
     if (player.isHitTimer && player.isHitTimer > 0) {
         ctx.globalAlpha = 0.5 + Math.abs(Math.sin(Date.now() / 60)) * 0.5;
     }
     player.draw(ctx, camera);
-    ctx.globalAlpha = 1.0; // Sicurezza rientro
+    ctx.globalAlpha = 1.0; 
 
-    drawDarkness(ctx);
+    drawDarkness(ctx, logicalWidth, logicalHeight);
 
     // Sistema HUD Overlay (Prompt Porta Casa/Castello)
     if (currentInteractable && !currentInteractable.looted) {
@@ -3023,7 +3041,10 @@ function draw() {
         ctx.shadowColor = "transparent";
         ctx.textAlign = 'left';
     }
+
+    ctx.restore(); // Fine scaling logico
 }
+
 
 // IL GRANDE PULSANTE START (Loop a 60 FPS o Refresh Sync)
 function gameLoop(timestamp) {
